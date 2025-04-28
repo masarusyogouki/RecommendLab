@@ -13,3 +13,10 @@ class Dataset:
     test_user2items: Dict[int, List[int]]
     # アイテムのコンテンツ情報
     item_content: pd.DataFrame
+
+@dataclasses.dataclass(frozen=True)
+class RecommendResult:
+    # テストデータセットの予測評価値。RSMEの評価
+    rating: pd.DataFrame
+    # キーはユーザーID, バリューはおすすめアイテムのIDのリスト。ランキング指標の評価
+    user2items: Dict[int, List[int]]
