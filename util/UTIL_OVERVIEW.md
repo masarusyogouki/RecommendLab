@@ -3,16 +3,81 @@
 ## 目次
 1. [概要](#概要)  
 2. [ディレクトリ構成](#ディレクトリ構成)  
+   - [`models.py`](#modelspy) 
    - [`data_loader.py`](#data_loaderpy)  
    - [`metric_calculator.py`](#metric_calculatorpy)  
-   - [`models.py`](#modelspy)  
+ 
 
 ## 概要
-`utils/`ディレクトリには、プロジェクト全体で共通して利用するロジックをまとめている。<br>主な役割は以下の通りである。
+`utils/`ディレクトには、プロジェクト全体で共通して利用するロジックをまとめている<br>主な役割は以下の通りである
 
 ## ディレクトリ構成
+### models.py
+### Dataset クラス
+モデルの学習用データ・評価用データ・ランキング評価用データ・アイテムメタ情報をひとまとめに管理するコンテナ
+```python
+@dataclasses.dataclass(frozen=True)
+class Dataset:
+    train: pd.DataFrame
+    test: pd.DataFrame
+    test_user2items: Dict[int, List[int]]
+    item_content: pd.DataFrame
+```
+**目的**  
+- 推薦システムの学習フェーズ＆評価フェーズで必要なデータをまとめて扱う
+
+**属性**  
+- `train`（学習用 DataFrame）  
+  ユーザー×アイテムの評価値を含む学習データ
+- `test`（テスト用 DataFrame）  
+  学習後に予測値と真値を比較して RMSE を算出するためのテストデータ
+- `test_user2items`（Dict[int, List[int]]）  
+  ランキング評価用テストセット。キーがユーザーID、値が当該ユーザーが高評価を付けたアイテムID のリスト
+- `item_content`（アイテムメタ情報 DataFrame）  
+  ジャンルや説明文など、アイテムの特徴量生成に使うコンテンツ情報
+
+### RecommendResult クラス  
+レーティング予測結果のデータと、ユーザーごとのおすすめアイテム一覧をまとめて返すコンテナ
+```python
+@dataclasses.dataclass(frozen=True)
+class RecommendResult:
+    rating: pd.DataFrame
+    user2items: Dict[int, List[int]]
+```
+**目的**  
+- 学習済みモデルが出力した結果を統一フォーマットで返却する
+
+**属性**  
+- `rating`（テストデータに対する予測レーティング DataFrame）  
+  各行が「ユーザーID・アイテムID・真の評価値・予測評価値」を含む形式を想定
+- `user2items`（Dict[int, List[int]]）  
+  ランキング形式の推薦結果。キーがユーザーID、値がモデルが推薦したアイテムIDリスト（スコア順）
+
+### Metrics クラス
+```python
+@dataclasses.dataclass(frozen=True)
+class Metrics:
+    rmse: float
+    precision_at_k: float
+    recall_at_k: float
+
+    def __repr__(self):
+        return f"rmse={self.rmse:.3f}, Precision@K={self.precision_at_k:.3f}, Recall@K={self.recall_at_k:.3f}"
+
+```
+**目的**  
+- モデル評価指標をまとめて管理し、見やすく整形して出力する
+
+**属性**  
+- `rmse`（float）  
+  レーティング予測精度の指標。値が小さいほど予測が真値に近い  
+- `precision_at_k`（float）  
+  上位K件推薦のうち正解率を示す Precision@K
+- `recall_at_k`（float）  
+  正解アイテムのうち上位K件に入った割合を示す Recall@K  
+
 ### data_loader.py
-`DataLoader`クラスはMovieLensデータセットを読み込み、学習用・評価用に分割したうえで、推薦システムに必要なフォーマットに整形して返す。
+`DataLoader`クラスはMovieLensデータセットを読み込み、学習用・評価用に分割したうえで、推薦システムに必要なフォーマットに整形して返す
 
 1. **クラス定義**
 ```python
@@ -121,3 +186,7 @@ class DataLoader:
 ```
 - 各ユーザごとに評価日時の降順で順位を付与 (`rating_order`)
 - 上位 `num_test_items` 件をテスト用、それ以外を学習用に分割
+
+### metric_calculator.py
+```python
+```
