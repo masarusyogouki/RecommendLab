@@ -79,7 +79,7 @@ class Metrics:
 ### data_loader.py
 `DataLoader`クラスはMovieLensデータセットを読み込み、学習用・評価用に分割したうえで、推薦システムに必要なフォーマットに整形して返す
 
-1. **クラス定義**
+1. **DataLoader クラス**
 ```python
 class DataLoader:
     def __init__(self, num_users: int = 1000, num_test_items: int = 5, data_path: str = "../data/ml-10M100K/"):
@@ -87,9 +87,18 @@ class DataLoader:
         self.num_test_items = num_test_items
         self.data_path = data_path
 ```
-- `num_users`: 使用するユーザー数(1000ユーザーに限定することで実験を高速化)
-- `num_test_items`: 各ユーザーからテスト用に抽出する最新評価件数(最新の5件をテスト用に設定)
-- `data_path`: MovieLensデータファイルが格納されたディレクトリパス
+**目的**
+- MovieLens データセットを読み込む 
+- 学習用・テスト用に分割
+- 推薦システムで使いやすい形式（データフレーム＋ランキング評価用リスト）に整形して返却
+
+**属性**
+- `num_users`（int）  
+  使用するユーザー数上限。実験を高速化するために、ID の小さいユーザーから指定数だけ抽出する。  
+- `num_test_items`（int）  
+  各ユーザーからテスト用に切り出す「最新評価件数」。デフォルトは直近 5 件。  
+- `data_path`（str）  
+  MovieLens データファイル（`movies.dat`, `tags.dat`, `ratings.dat`）が格納されているディレクトリへのパス。
 
 2. **load()メソッド**
 ```python
@@ -103,11 +112,29 @@ class DataLoader:
         )
         return Dataset(movielens_train, movielens_test, movielens_test_user2items, movie_content)
 ```
-- _load()で映画情報・評価情報を読み込み
-- _split_data()で学習用・テスト用に分割
-- テスト用データから「評価値≥ 4 の映画リスト」をユーザごとに抽出
+
+**目的**  
+    一連の読み込み・分割・整形処理をまとめて呼び出し、最終的に `Dataset` インスタンスを返す<br>
+    
+**処理の流れ**  
+    1. `_load()` で映画メタ情報＋評価情報を読み込む  
+    2. `_split_data()` で学習用データとテスト用データに分割  
+    3. テスト用データから「評価値 ≥ 4」のアイテムをユーザーごとに抽出し、ランキング評価用ディクショナリを構築  
+    4. `Dataset(train, test, test_user2items, movie_content)` を返却  
 
 3. **_load()プライベートメソッド**
+
+**目的**  
+    - 生データファイルを読み込み、  
+    - 映画情報・タグ情報・評価情報を結合した中間データを作成する。
+
+**処理内容**  
+    1. `movies.dat` を読み込み、`movie_id`, `title`, `genre` を抽出  
+    2. `genre` をリスト化  
+    3. `tags.dat` を読み込み、タグ文字列を小文字化して映画ごとにリスト集計  
+    4. 映画情報とタグ情報をマージ → `movie_content_df`  
+    5. `ratings.dat` を読み込み、上位 `num_users` ユーザーの評価のみ抽出  
+    6. 評価情報と映画情報をマージ → `ratings_df`
 ```python
     def _load(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         # 映画の情報の読み込み(10197作品)
@@ -172,7 +199,7 @@ class DataLoader:
     - `ratings.dat`から`user_id`・`movie_id`・`tag`・`timestamp`を取得
     - 映画メタ情報とマージ
 
-3. **_split_data()プライベートメソッド**
+4. **_split_data()プライベートメソッド**
 ```python
     def _split_data(self, movielens: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
         # 学習用とテスト用にデータを分割する
@@ -184,8 +211,14 @@ class DataLoader:
         movielens_test = movielens[movielens["rating_order"] <= self.num_test_items]
         return movielens_train, movielens_test
 ```
-- 各ユーザごとに評価日時の降順で順位を付与 (`rating_order`)
-- 上位 `num_test_items` 件をテスト用、それ以外を学習用に分割
+
+**目的**  
+    - 各ユーザーの直近 `num_test_items` 件をテスト用に、それ以外を学習用に分割する。  
+
+**処理内容**  
+    1. 各ユーザーの評価をタイムスタンプ降順でランク付け（`rating_order`）  
+    2. `rating_order > num_test_items` を学習用、`≤ num_test_items` をテスト用に抽出  
+    3. `(train_df, test_df)` を返却  
 
 ### metric_calculator.py
 ```python
