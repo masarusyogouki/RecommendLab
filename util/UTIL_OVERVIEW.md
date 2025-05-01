@@ -222,4 +222,90 @@ class DataLoader:
 
 ### metric_calculator.py
 ```python
+class MetricCalculator:
+    def calc(
+        self,
+        true_rating: List[float],
+        pred_rating: List[float],
+        true_user2items: Dict[int, List[int]],
+        pred_user2items: Dict[int, List[int]],
+        k: int,
+    ) -> Metrics:
+        rmse = self._calc_rmse(true_rating, pred_rating)
+        precision_at_k = self._calc_precision_at_k(true_user2items, pred_user2items, k)
+        recall_at_k = self._calc_recall_at_k(true_user2items, pred_user2items, k)
+        return Metrics(rmse, precision_at_k, recall_at_k)
+
+    def _precision_at_k(self, true_items: List[int], pred_items: List[int], k: int) -> float:
+        if k == 0:
+            return 0.0
+
+        p_at_k = (len(set(true_items) & set(pred_items[:k]))) / k
+        return p_at_k
+
+    def _recall_at_k(self, true_items: List[int], pred_items: List[int], k: int) -> float:
+        if len(true_items) == 0 or k == 0:
+            return 0.0
+
+        r_at_k = (len(set(true_items) & set(pred_items[:k]))) / len(true_items)
+        return r_at_k
+
+    def _calc_rmse(self, true_rating: List[float], pred_rating: List[float]) -> float:
+        return np.sqrt(mean_squared_error(true_rating, pred_rating))
+
+    def _calc_recall_at_k(
+        self, true_user2items: Dict[int, List[int]], pred_user2items: Dict[int, List[int]], k: int
+    ) -> float:
+        scores = []
+        # テストデータに存在する各ユーザーのrecall@kを計算
+        for user_id in true_user2items.keys():
+            r_at_k = self._recall_at_k(true_user2items[user_id], pred_user2items[user_id], k)
+            scores.append(r_at_k)
+        return np.mean(scores)
+
+    def _calc_precision_at_k(
+        self, true_user2items: Dict[int, List[int]], pred_user2items: Dict[int, List[int]], k: int
+    ) -> float:
+        scores = []
+        # テストデータに存在する各ユーザーのprecision@kを計算
+        for user_id in true_user2items.keys():
+            p_at_k = self._precision_at_k(true_user2items[user_id], pred_user2items[user_id], k)
+            scores.append(p_at_k)
+        return np.mean(scores)
 ```
+
+**目的**
+- 推薦システムの予測結果を以下の指標で評価し、`Metrics` オブジェクトとしてまとめて返却する  
+  - RMSE（Root Mean Squared Error）  
+  - Precision@K  
+  - Recall@K  
+
+- `calc(true_rating, pred_rating, true_user2items, pred_user2items, k) → Metrics`  
+  - 引数  
+    - `true_rating`：実際の評価値リスト  
+    - `pred_rating`：予測評価値リスト  
+    - `true_user2items`：各ユーザーの「真の高評価アイテムIDリスト」  
+    - `pred_user2items`：各ユーザーの「推薦アイテムIDリスト」  
+    - `k`：ランキング評価のトップ K  
+  - 処理  
+    1. `_calc_rmse` で RMSE を算出  
+    2. `_calc_precision_at_k` で全ユーザー平均の Precision@K を算出  
+    3. `_calc_recall_at_k` で全ユーザー平均の Recall@K を算出  
+    4. `Metrics(rmse, precision_at_k, recall_at_k)` を返却  
+
+- `_calc_rmse(true_rating, pred_rating) → float`  
+  - `mean_squared_error` を使って MSE を算出し、平方根を返す  
+
+- `_precision_at_k(true_items, pred_items, k) → float`  
+  - あるユーザーについて、`pred_items` の上位 K と `true_items` の重複数を K で割った Precision@K を返す  
+  - `k == 0` の場合は `0.0`  
+
+- `_recall_at_k(true_items, pred_items, k) → float`  
+  - あるユーザーについて、`pred_items` の上位 K と `true_items` の重複数を `len(true_items)` で割った Recall@K を返す  
+  - `len(true_items) == 0` または `k == 0` の場合は `0.0`  
+
+- `_calc_precision_at_k(true_user2items, pred_user2items, k) → float`  
+  - テスト対象ユーザー全員の `_precision_at_k` を平均化して返す  
+
+- `_calc_recall_at_k(true_user2items, pred_user2items, k) → float`  
+  - テスト対象ユーザー全員の `_recall_at_k` を平均化して返す  
