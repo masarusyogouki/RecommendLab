@@ -5,8 +5,7 @@
 2. [ディレクトリ構成](#ディレクトリ構成)  
    - [`base_recommender.py`](#baserecommenderpy) 
    - [`random.py`](#randompy) 
-
-## 概要
+   - [`popularity.py`](#popularitypy) 
 
 ## ディレクトリ構成
 ### base_recommender.py
@@ -53,3 +52,5 @@ MovieLensデータセットを使った推薦アルゴリズムを実装・評�
 
 5. **結果を返却**  
    - `RecommendResult(rating_pred_series, pred_user2items)` を返す  
+
+### popularity.py
