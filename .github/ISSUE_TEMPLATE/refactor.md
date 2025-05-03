@@ -43,3 +43,4 @@ assignees: ''
 
 ## その他の参考情報（任意）
 <!-- 参考になりそうな資料やリンク、スクリーンショットなどがあれば記載 -->
+[推薦システム実践入門](https://github.com/oreilly-japan/RecommenderSystems/tree/main)

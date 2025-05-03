@@ -30,3 +30,4 @@
 
 ## 補足情報
 <!-- その他、レビューアーに伝えておきたい情報があれば記載 -->
+[推薦システム実践入門](https://github.com/oreilly-japan/RecommenderSystems/tree/main)
